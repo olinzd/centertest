@@ -14,92 +14,120 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            background: #f8f9fa;
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
         }
 
         .hidden {
             display: none !important;
         }
 
+        /* Header Styles */
         .header {
-            background: white;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 16px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
         }
 
         .header h1 {
-            color: #333;
             font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .user-info {
             font-size: 16px;
-            color: #666;
+            opacity: 0.9;
         }
 
+        /* Controls */
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             margin-bottom: 20px;
             align-items: center;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .month-selector {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
             background: white;
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 150px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .refresh-btn {
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+            padding: 12px 20px;
+            border-radius: 12px;
             cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+            transition: all 0.3s ease;
         }
 
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(118, 75, 162, 0.4);
+        }
+
+        /* Calendar */
         .calendar {
             background: white;
-            border-radius: 10px;
+            border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             margin-bottom: 20px;
         }
 
         .calendar-header {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            margin-bottom: 15px;
-            font-weight: bold;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
             text-align: center;
+            color: #666;
+            padding: 0 4px;
         }
 
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
+            gap: 8px;
         }
 
         .calendar-day {
             aspect-ratio: 1;
-            border-radius: 5px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
-            padding: 5px;
-            border: 1px solid #eee;
-            font-size: 14px;
+            padding: 8px 4px;
+            border: 2px solid #f0f0f0;
+            background: white;
+            position: relative;
+            overflow: hidden;
+            min-height: 60px;
         }
 
         .calendar-day.empty {
@@ -107,96 +135,251 @@
             border: none;
         }
 
-        .calendar-day.has-shift {
-            background: #e3f2fd;
-            border-color: #2196f3;
-        }
-
-        .calendar-day.long-shift {
-            background: #bbdefb;
-            border-color: #1976d2;
+        .calendar-day.today {
+            border-color: #ff6b6b;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffecec 100%);
         }
 
         .day-number {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            z-index: 2;
+        }
+
+        /* Shift Parallelograms */
+        .shift-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .shift-parallelogram {
+            height: 16px;
+            background: currentColor;
+            transform: skewX(-15deg);
+            border-radius: 3px;
+            opacity: 0.9;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .shift-parallelogram.main-user {
+            height: 20px;
+            min-width: 80%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 3;
+        }
+
+        .shift-parallelogram.other-user {
+            height: 8px;
+            min-width: 40%;
+            opacity: 0.6;
+        }
+
+        .shift-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) skewX(15deg);
+            color: white;
+            font-size: 10px;
             font-weight: bold;
-            margin-bottom: 2px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none;
+            white-space: nowrap;
         }
 
-        .shift-hours {
-            font-size: 12px;
-            color: #666;
-        }
+        /* Shift Type Colors */
+        .shift-short { color: #ff9f43; } /* Короткая смена - оранжевый */
+        .shift-day { color: #54a0ff; }   /* Дневная смена - синий */
+        .shift-full { color: #2ecc71; }  /* Полная смена - зеленый */
+        .shift-extended { color: #9b59b6; } /* Расширенная смена - фиолетовый */
+        .shift-long { color: #e74c3c; }  /* Длинная смена - красный */
 
+        /* Loading */
         .loading {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            backdrop-filter: blur(5px);
         }
 
         .spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #007bff;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .loading-text {
+            font-size: 16px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Legend */
+        .legend {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+            color: #333;
+        }
+
+        .legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            transform: skewX(-15deg);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .calendar-day {
+                padding: 6px 2px;
+                min-height: 50px;
+            }
+            
+            .day-number {
+                font-size: 12px;
+            }
+            
+            .shift-parallelogram.main-user {
+                height: 16px;
+            }
+            
+            .shift-parallelogram.other-user {
+                height: 6px;
+            }
+            
+            .shift-info {
+                font-size: 8px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .month-selector {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Основной интерфейс -->
-        <div id="main-section">
-            <div class="header">
-                <h1>Мой график смен</h1>
-                <div class="user-info">
-                    Привет, <span id="user-name"></span>!
-                </div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📅 График смен</h1>
+            <div class="user-info">
+                Привет, <span id="user-name"></span>!
             </div>
+        </div>
 
-            <div class="controls">
-                <select id="month-selector" class="month-selector">
-                    <option value="2025-09">Сентябрь 2025</option>
-                    <option value="2025-10">Октябрь 2025</option>
-                    <option value="2025-11">Ноябрь 2025</option>
-                    <option value="2025-12">Декабрь 2025</option>
-                </select>
-                <button id="refresh-btn" class="refresh-btn">🔄 Обновить</button>
+        <!-- Controls -->
+        <div class="controls">
+            <select id="month-selector" class="month-selector">
+                <option value="2025-01">Январь 2025</option>
+                <option value="2025-02">Февраль 2025</option>
+                <option value="2025-03">Март 2025</option>
+                <option value="2025-04">Апрель 2025</option>
+                <option value="2025-05">Май 2025</option>
+                <option value="2025-06">Июнь 2025</option>
+                <option value="2025-07">Июль 2025</option>
+                <option value="2025-08">Август 2025</option>
+                <option value="2025-09">Сентябрь 2025</option>
+                <option value="2025-10">Октябрь 2025</option>
+                <option value="2025-11">Ноябрь 2025</option>
+                <option value="2025-12">Декабрь 2025</option>
+            </select>
+            <button id="refresh-btn" class="refresh-btn">🔄 Обновить</button>
+        </div>
+
+        <!-- Calendar -->
+        <div class="calendar">
+            <div class="calendar-header">
+                <div>Пн</div>
+                <div>Вт</div>
+                <div>Ср</div>
+                <div>Чт</div>
+                <div>Пт</div>
+                <div>Сб</div>
+                <div>Вс</div>
             </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
 
-            <!-- Календарь -->
-            <div id="calendar" class="calendar">
-                <div class="calendar-header">
-                    <div>Пн</div>
-                    <div>Вт</div>
-                    <div>Ср</div>
-                    <div>Чт</div>
-                    <div>Пт</div>
-                    <div>Сб</div>
-                    <div>Вс</div>
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-title">Обозначения смен</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff9f43;"></div>
+                    <span>Короткая (1-4ч)</span>
                 </div>
-                <div id="calendar-grid" class="calendar-grid"></div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #54a0ff;"></div>
+                    <span>Дневная (5-8ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2ecc71;"></div>
+                    <span>Полная (9-11ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Расширенная (12ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Длинная (12+ч)</span>
+                </div>
             </div>
         </div>
 
         <!-- Loading -->
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <p>Загрузка данных...</p>
+            <p class="loading-text">Загрузка данных...</p>
         </div>
     </div>
 
@@ -212,13 +395,15 @@
         const loading = document.getElementById('loading');
 
         let currentUser = null;
-        let shiftsData = [];
+        let employeeIds = [];
+        let allShifts = [];
 
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
             if (tg) {
                 tg.expand();
                 tg.ready();
+                tg.enableClosingConfirmation();
             }
             initApp();
         });
@@ -237,9 +422,9 @@
                 } else {
                     // Если нет данных - показываем сообщение
                     document.body.innerHTML = `
-                        <div style="padding: 20px; text-align: center;">
+                        <div style="padding: 40px; text-align: center;">
                             <h2>Откройте приложение в Telegram</h2>
-                            <p>Это приложение работает только внутри Telegram</p>
+                            <p style="margin-top: 10px; color: #666;">Это приложение работает только внутри Telegram</p>
                         </div>
                     `;
                     return;
@@ -250,26 +435,33 @@
             userName.textContent = `${currentUser.first_name}${currentUser.last_name ? ' ' + currentUser.last_name : ''}`;
             
             // Настройка обработчиков
-            refreshBtn.addEventListener('click', loadShifts);
+            refreshBtn.addEventListener('click', loadAllData);
             monthSelector.addEventListener('change', renderCalendar);
 
+            // Устанавливаем текущий месяц
+            const today = new Date();
+            const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
+            monthSelector.value = currentMonth;
+
             // Загружаем данные
-            loadShifts();
+            loadAllData();
         }
 
-        // Загрузка смен
-        async function loadShifts() {
+        // Загрузка всех данных
+        async function loadAllData() {
             showLoading(true);
             
             try {
-                // 1. Получаем ID сотрудников по Telegram ID
+                console.log('Загрузка данных для TG ID:', currentUser.id);
+                
+                // 1. Получаем ID сотрудников
                 const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
                 
                 if (!idsResponse.ok) {
                     throw new Error(`Ошибка сервера: ${idsResponse.status}`);
                 }
                 
-                const employeeIds = await idsResponse.json();
+                employeeIds = await idsResponse.json();
                 console.log('Найдены ID сотрудников:', employeeIds);
                 
                 if (employeeIds.length === 0) {
@@ -278,23 +470,16 @@
                     return;
                 }
                 
-                // 2. Загружаем смены для всех ID
-                const allShifts = [];
-                for (const id of employeeIds) {
-                    const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
-                    
-                    if (!shiftsResponse.ok) {
-                        console.warn(`Ошибка загрузки смен для ID ${id}`);
-                        continue;
-                    }
-                    
-                    const shifts = await shiftsResponse.json();
-                    console.log(`Смены для ID ${id}:`, shifts);
-                    allShifts.push(...shifts);
+                // 2. Загружаем ВСЕ смены (для всех сотрудников)
+                const allShiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getAllShifts`);
+                
+                if (!allShiftsResponse.ok) {
+                    throw new Error(`Ошибка загрузки всех смен: ${allShiftsResponse.status}`);
                 }
                 
-                shiftsData = allShifts;
-                console.log('Все смены:', shiftsData);
+                allShifts = await allShiftsResponse.json();
+                console.log('Всего смен загружено:', allShifts.length);
+                
                 renderCalendar();
                 
             } catch (error) {
@@ -311,7 +496,7 @@
             const [year, month] = selectedMonth.split('-').map(Number);
             
             // Фильтруем смены по выбранному месяцу
-            const monthShifts = shiftsData.filter(shift => {
+            const monthShifts = allShifts.filter(shift => {
                 const shiftDate = new Date(shift.date);
                 return shiftDate.getFullYear() === year && shiftDate.getMonth() + 1 === month;
             });
@@ -332,24 +517,62 @@
             
             // Дни месяца
             const daysInMonth = new Date(year, month, 0).getDate();
+            const today = new Date();
             
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayElement = document.createElement('div');
                 const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                const shift = monthShifts.find(s => s.date === dateStr);
                 
-                dayElement.className = 'calendar-day';
-                if (shift) {
-                    dayElement.classList.add(shift.hours === 12 ? 'long-shift' : 'has-shift');
+                // Проверяем, сегодня ли это
+                if (today.getDate() === day && 
+                    today.getMonth() + 1 === month && 
+                    today.getFullYear() === year) {
+                    dayElement.classList.add('today');
                 }
                 
-                dayElement.innerHTML = `
-                    <div class="day-number">${day}</div>
-                    ${shift ? `<div class="shift-hours">${shift.hours}ч</div>` : ''}
-                `;
+                dayElement.className = 'calendar-day';
+                
+                // Добавляем номер дня
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = day;
+                dayElement.appendChild(dayNumber);
+                
+                // Смены для этого дня
+                const dayShifts = monthShifts.filter(s => s.date === dateStr);
+                
+                if (dayShifts.length > 0) {
+                    const shiftContainer = document.createElement('div');
+                    shiftContainer.className = 'shift-container';
+                    
+                    dayShifts.forEach(shift => {
+                        const isMainUser = employeeIds.includes(shift.employeeId);
+                        const shiftElem = document.createElement('div');
+                        shiftElem.className = `shift-parallelogram ${isMainUser ? 'main-user' : 'other-user'} shift-${getShiftTypeClass(shift.hours)}`;
+                        
+                        const shiftInfo = document.createElement('div');
+                        shiftInfo.className = 'shift-info';
+                        shiftInfo.textContent = isMainUser ? `${shift.hours}ч` : '';
+                        
+                        shiftElem.appendChild(shiftInfo);
+                        shiftContainer.appendChild(shiftElem);
+                    });
+                    
+                    dayElement.appendChild(shiftContainer);
+                }
                 
                 calendarGrid.appendChild(dayElement);
             }
+        }
+
+        // Получение класса типа смены
+        function getShiftTypeClass(hours) {
+            if (hours <= 4) return 'short';
+            if (hours <= 8) return 'day';
+            if (hours <= 11) return 'full';
+            if (hours === 12) return 'extended';
+            if (hours > 12) return 'long';
+            return 'full';
         }
 
         // Вспомогательные функции

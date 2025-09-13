@@ -63,14 +63,8 @@ async function loadShifts() {
     try {
         console.log('Загрузка данных для TG ID:', currentUser.id);
         
-        // 1. Получаем ID сотрудников
-        const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+        // 1. Получаем ID сотрудников (без CORS настроек)
+        const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
         
         if (!idsResponse.ok) {
             throw new Error(`HTTP error! status: ${idsResponse.status}`);
@@ -89,13 +83,7 @@ async function loadShifts() {
         const allShifts = [];
         for (const id of employeeIds) {
             try {
-                const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
                 
                 if (shiftsResponse.ok) {
                     const shifts = await shiftsResponse.json();
@@ -115,7 +103,13 @@ async function loadShifts() {
         
     } catch (error) {
         console.error('Ошибка загрузки:', error);
-        alert('Ошибка подключения к серверу. Проверьте консоль для деталей.');
+        
+        // Если CORS ошибка, покажем специфическое сообщение
+        if (error.message.includes('CORS') || error.message.includes('Network')) {
+            alert('CORS ошибка. Попробуйте открыть приложение в HTTPS режиме или настройте CORS прокси.');
+        } else {
+            alert('Ошибка загрузки данных: ' + error.message);
+        }
     } finally {
         showLoading(false);
     }

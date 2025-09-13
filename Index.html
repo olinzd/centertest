@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мое мини-приложение</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        .user-info {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-section">
+        <h1>Добро пожаловать!</h1>
+        <p>Для использования приложения необходимо авторизоваться</p>
+        <button id="auth-button">Авторизоваться через Telegram</button>
+    </div>
+
+    <div id="user-section" class="hidden">
+        <h1>Привет, <span id="user-name"></span>!</h1>
+        <div class="user-info">
+            <p>ID: <span id="user-id"></span></p>
+            <p>Username: @<span id="user-username"></span></p>
+        </div>
+        <button id="logout-button">Выйти</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

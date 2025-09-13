@@ -1,5 +1,5 @@
 const tg = window.Telegram.WebApp;
-const APP_SCRIPT_URL = 'ВАШ_URL_GOOGLE_APPS_SCRIPT';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTaaYZy0QRh1lFNdFFChF14-feZttFVVEAhHJixI1Aw5Ej7-QQ_OvG3MFUDETzxDqlmw/exec';
 
 // Элементы DOM
 const authSection = document.getElementById('auth-section');

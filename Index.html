@@ -3,9 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График смен</title>
+    <title>Мой график смен</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .month-selector {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .calendar {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            border: none;
+        }
+
+        .calendar-day.has-shift {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .calendar-day.long-shift {
+            background: #bbdefb;
+            border-color: #1976d2;
+        }
+
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .shift-hours {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -14,8 +164,7 @@
             <div class="header">
                 <h1>Мой график смен</h1>
                 <div class="user-info">
-                    <span>Привет, <span id="user-name"></span>!</span>
-                    <button id="logout-button">Выйти</button>
+                    Привет, <span id="user-name"></span>!
                 </div>
             </div>
 
@@ -32,27 +181,15 @@
             <!-- Календарь -->
             <div id="calendar" class="calendar">
                 <div class="calendar-header">
-                    <div class="week-day">Пн</div>
-                    <div class="week-day">Вт</div>
-                    <div class="week-day">Ср</div>
-                    <div class="week-day">Чт</div>
-                    <div class="week-day">Пт</div>
-                    <div class="week-day">Сб</div>
-                    <div class="week-day">Вс</div>
+                    <div>Пн</div>
+                    <div>Вт</div>
+                    <div>Ср</div>
+                    <div>Чт</div>
+                    <div>Пт</div>
+                    <div>Сб</div>
+                    <div>Вс</div>
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
-            </div>
-
-            <!-- Легенда -->
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="color-box" style="background-color: #e3f2fd;"></div>
-                    <span>Смена (11ч)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background-color: #bbdefb;"></div>
-                    <span>Расширенная смена (12ч)</span>
-                </div>
             </div>
         </div>
 
@@ -63,6 +200,162 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        const tg = window.Telegram.WebApp;
+        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/ВАШ_СКРИПТ_ID/exec';
+
+        // Элементы DOM
+        const userName = document.getElementById('user-name');
+        const monthSelector = document.getElementById('month-selector');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const loading = document.getElementById('loading');
+
+        let currentUser = null;
+        let shiftsData = [];
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            if (tg) {
+                tg.expand();
+                tg.ready();
+            }
+            initApp();
+        });
+
+        // Инициализация приложения
+        function initApp() {
+            // Авторизация через Telegram
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                currentUser = tg.initDataUnsafe.user;
+                localStorage.setItem('tg_user_data', JSON.stringify(currentUser));
+            } else {
+                // Fallback: проверяем localStorage
+                const savedUser = localStorage.getItem('tg_user_data');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                } else {
+                    // Если нет данных - показываем сообщение
+                    document.body.innerHTML = `
+                        <div style="padding: 20px; text-align: center;">
+                            <h2>Откройте приложение в Telegram</h2>
+                            <p>Это приложение работает только внутри Telegram</p>
+                        </div>
+                    `;
+                    return;
+                }
+            }
+
+            // Показываем интерфейс
+            userName.textContent = `${currentUser.first_name}${currentUser.last_name ? ' ' + currentUser.last_name : ''}`;
+            
+            // Настройка обработчиков
+            refreshBtn.addEventListener('click', loadShifts);
+            monthSelector.addEventListener('change', renderCalendar);
+
+            // Загружаем данные
+            loadShifts();
+        }
+
+        // Загрузка смен
+        async function loadShifts() {
+            showLoading(true);
+            
+            try {
+                // 1. Получаем ID сотрудников по Telegram ID
+                const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
+                
+                if (!idsResponse.ok) {
+                    throw new Error(`Ошибка сервера: ${idsResponse.status}`);
+                }
+                
+                const employeeIds = await idsResponse.json();
+                console.log('Найдены ID сотрудников:', employeeIds);
+                
+                if (employeeIds.length === 0) {
+                    alert('Сотрудник не найден. Обратитесь к администратору.');
+                    showLoading(false);
+                    return;
+                }
+                
+                // 2. Загружаем смены для всех ID
+                const allShifts = [];
+                for (const id of employeeIds) {
+                    const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
+                    
+                    if (!shiftsResponse.ok) {
+                        console.warn(`Ошибка загрузки смен для ID ${id}`);
+                        continue;
+                    }
+                    
+                    const shifts = await shiftsResponse.json();
+                    console.log(`Смены для ID ${id}:`, shifts);
+                    allShifts.push(...shifts);
+                }
+                
+                shiftsData = allShifts;
+                console.log('Все смены:', shiftsData);
+                renderCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                alert('Ошибка загрузки данных: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Отображение календаря
+        function renderCalendar() {
+            const selectedMonth = monthSelector.value;
+            const [year, month] = selectedMonth.split('-').map(Number);
+            
+            // Фильтруем смены по выбранному месяцу
+            const monthShifts = shiftsData.filter(shift => {
+                const shiftDate = new Date(shift.date);
+                return shiftDate.getFullYear() === year && shiftDate.getMonth() + 1 === month;
+            });
+            
+            // Создаем календарь
+            calendarGrid.innerHTML = '';
+            
+            // Первый день месяца
+            const firstDay = new Date(year, month - 1, 1);
+            const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+            
+            // Пустые ячейки перед первым днем
+            for (let i = 0; i < startDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Дни месяца
+            const daysInMonth = new Date(year, month, 0).getDate();
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                const shift = monthShifts.find(s => s.date === dateStr);
+                
+                dayElement.className = 'calendar-day';
+                if (shift) {
+                    dayElement.classList.add(shift.hours === 12 ? 'long-shift' : 'has-shift');
+                }
+                
+                dayElement.innerHTML = `
+                    <div class="day-number">${day}</div>
+                    ${shift ? `<div class="shift-hours">${shift.hours}ч</div>` : ''}
+                `;
+                
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        // Вспомогательные функции
+        function showLoading(show) {
+            loading.classList.toggle('hidden', !show);
+        }
+    </script>
 </body>
 </html>

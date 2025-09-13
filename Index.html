@@ -3,47 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мое мини-приложение</title>
+    <title>График смен</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            text-align: center;
-        }
-        .user-info {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="auth-section">
-        <h1>Добро пожаловать!</h1>
-        <p>Для использования приложения необходимо авторизоваться</p>
-        <button id="auth-button">Авторизоваться через Telegram</button>
-    </div>
-
-    <div id="user-section" class="hidden">
-        <h1>Привет, <span id="user-name"></span>!</h1>
-        <div class="user-info">
-            <p>ID: <span id="user-id"></span></p>
-            <p>Username: @<span id="user-username"></span></p>
+    <div id="app">
+        <!-- Авторизация -->
+        <div id="auth-section" class="hidden">
+            <div class="auth-container">
+                <h1>Добро пожаловать!</h1>
+                <p>Для просмотра графика необходимо авторизоваться</p>
+                <button id="auth-button" class="tg-button">Авторизоваться через Telegram</button>
+            </div>
         </div>
-        <button id="logout-button">Выйти</button>
+
+        <!-- Основной интерфейс -->
+        <div id="main-section" class="hidden">
+            <header class="header">
+                <h1>Мой график смен</h1>
+                <div class="user-info">
+                    <span id="user-name"></span>
+                    <button id="logout-button" class="logout-btn">Выйти</button>
+                </div>
+            </header>
+
+            <div class="controls">
+                <select id="month-selector" class="month-selector">
+                    <option value="2025-09">Сентябрь 2025</option>
+                    <option value="2025-10">Октябрь 2025</option>
+                    <option value="2025-11">Ноябрь 2025</option>
+                    <option value="2025-12">Декабрь 2025</option>
+                </select>
+                <button id="refresh-btn" class="refresh-btn">🔄 Обновить</button>
+            </div>
+
+            <!-- Календарь -->
+            <div id="calendar" class="calendar">
+                <div class="calendar-header">
+                    <div class="week-day">Пн</div>
+                    <div class="week-day">Вт</div>
+                    <div class="week-day">Ср</div>
+                    <div class="week-day">Чт</div>
+                    <div class="week-day">Пт</div>
+                    <div class="week-day">Сб</div>
+                    <div class="week-day">Вс</div>
+                </div>
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+
+            <!-- Легенда -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="color-box" style="background-color: #e3f2fd;"></div>
+                    <span>Смена (11ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background-color: #bbdefb;"></div>
+                    <span>Расширенная смена (12ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background-color: #ffebee;"></div>
+                    <span>Выходной</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Загрузка данных...</p>
+        </div>
     </div>
-<!-- Добавляем кнопку обновления -->
-<button id="update-button" class="hidden">🔄 Обновить данные</button>
-<div id="admin-panel" class="hidden">
-    <h2>Панель управления</h2>
-    <button id="parse-data-button">Обновить график из исходной таблицы</button>
-    <div id="update-result"></div>
-</div>
 
     <script src="app.js"></script>
 </body>

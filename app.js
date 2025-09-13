@@ -1,161 +1,177 @@
-// Инициализация Telegram WebApp
 const tg = window.Telegram.WebApp;
+const APP_SCRIPT_URL = 'ВАШ_URL_GOOGLE_APPS_SCRIPT';
 
 // Элементы DOM
 const authSection = document.getElementById('auth-section');
-const userSection = document.getElementById('user-section');
+const mainSection = document.getElementById('main-section');
 const authButton = document.getElementById('auth-button');
 const logoutButton = document.getElementById('logout-button');
 const userName = document.getElementById('user-name');
-const userId = document.getElementById('user-id');
-const userUsername = document.getElementById('user-username');
+const monthSelector = document.getElementById('month-selector');
+const refreshBtn = document.getElementById('refresh-btn');
+const calendarGrid = document.getElementById('calendar-grid');
+const loading = document.getElementById('loading');
 
-// Проверка авторизации при загрузке
+let currentUser = null;
+let shiftsData = [];
+
+// Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
-    tg.expand(); // Развернуть приложение на весь экран
+    if (tg) {
+        tg.expand();
+        tg.ready();
+    }
     checkAuth();
 });
 
-// Функция проверки авторизации
+// Проверка авторизации
 function checkAuth() {
     const userData = localStorage.getItem('tg_user_data');
     
     if (userData) {
-        // Пользователь уже авторизован
-        const user = JSON.parse(userData);
-        showUserData(user);
-    } else if (tg.initDataUnsafe.user) {
-        // Пользователь открыл приложение из Telegram
-        const user = tg.initDataUnsafe.user;
-        saveUserData(user);
-        showUserData(user);
+        currentUser = JSON.parse(userData);
+        showMainInterface();
+        loadShifts();
+    } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        currentUser = tg.initDataUnsafe.user;
+        saveUserData(currentUser);
+        showMainInterface();
+        loadShifts();
     } else {
-        // Пользователь не авторизован
-        showAuthButton();
+        showAuthSection();
     }
 }
 
-// Показать данные пользователя
-function showUserData(user) {
-    authSection.classList.add('hidden');
-    userSection.classList.remove('hidden');
-    
-    userName.textContent = `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
-    userId.textContent = user.id;
-    userUsername.textContent = user.username || 'отсутствует';
-}
-
-// Показать кнопку авторизации
-function showAuthButton() {
+// Показать интерфейс авторизации
+function showAuthSection() {
     authSection.classList.remove('hidden');
-    userSection.classList.add('hidden');
+    mainSection.classList.add('hidden');
     
     authButton.addEventListener('click', function() {
-        // В мини-приложении авторизация происходит автоматически
-        // Эта кнопка нужна для случаев, когда приложение открыто вне Telegram
-        alert('Откройте это приложение в Telegram для авторизации');
+        alert('Откройте приложение в Telegram для авторизации');
     });
 }
 
-// Сохранить данные пользователя
+// Показать основной интерфейс
+function showMainInterface() {
+    authSection.classList.add('hidden');
+    mainSection.classList.remove('hidden');
+    
+    userName.textContent = `${currentUser.first_name}${currentUser.last_name ? ' ' + currentUser.last_name : ''}`;
+    
+    // Настройка обработчиков
+    logoutButton.addEventListener('click', logout);
+    refreshBtn.addEventListener('click', loadShifts);
+    monthSelector.addEventListener('change', renderCalendar);
+}
+
+// Загрузка смен
+async function loadShifts() {
+    showLoading(true);
+    
+    try {
+        // 1. Получаем ID сотрудников по Telegram ID
+        const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
+        const employeeIds = await idsResponse.json();
+        
+        if (employeeIds.length === 0) {
+            alert('Сотрудник не найден. Обратитесь к администратору.');
+            showLoading(false);
+            return;
+        }
+        
+        // 2. Загружаем смены для всех ID
+        const allShifts = [];
+        for (const id of employeeIds) {
+            const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
+            const shifts = await shiftsResponse.json();
+            allShifts.push(...shifts);
+        }
+        
+        shiftsData = allShifts;
+        renderCalendar();
+        
+    } catch (error) {
+        console.error('Ошибка загрузки смен:', error);
+        alert('Ошибка загрузки данных. Проверьте подключение.');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Отображение календаря
+function renderCalendar() {
+    const selectedMonth = monthSelector.value; // Формат: "2025-09"
+    const [year, month] = selectedMonth.split('-').map(Number);
+    
+    // Фильтруем смены по выбранному месяцу
+    const monthShifts = shiftsData.filter(shift => {
+        const shiftDate = new Date(shift.date);
+        return shiftDate.getFullYear() === year && shiftDate.getMonth() + 1 === month;
+    });
+    
+    // Создаем календарь
+    calendarGrid.innerHTML = '';
+    
+    // Первый день месяца
+    const firstDay = new Date(year, month - 1, 1);
+    const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Приводим к Пн=0, Вс=6
+    
+    // Пустые ячейки перед первым днем
+    for (let i = 0; i < startDay; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day empty';
+        calendarGrid.appendChild(emptyDay);
+    }
+    
+    // Дни месяца
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayElement = document.createElement('div');
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        const shift = monthShifts.find(s => s.date === dateStr);
+        
+        // Определяем день недели
+        const currentDate = new Date(year, month - 1, day);
+        const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+        
+        dayElement.className = 'calendar-day';
+        if (isWeekend) dayElement.classList.add('weekend');
+        if (shift) dayElement.classList.add(shift.hours === 12 ? 'long-shift' : 'has-shift');
+        
+        dayElement.innerHTML = `
+            <div class="day-number">${day}</div>
+            ${shift ? `
+                <div class="shift-info">
+                    ${shift.hours}ч<br>
+                    ${shift.shift_type}
+                </div>
+            ` : ''}
+        `;
+        
+        calendarGrid.appendChild(dayElement);
+    }
+}
+
+// Вспомогательные функции
+function showLoading(show) {
+    loading.classList.toggle('hidden', !show);
+}
+
 function saveUserData(user) {
     localStorage.setItem('tg_user_data', JSON.stringify(user));
 }
 
-// Выход из аккаунта
-logoutButton.addEventListener('click', function() {
+function logout() {
     localStorage.removeItem('tg_user_data');
-    showAuthButton();
-});
+    currentUser = null;
+    showAuthSection();
+}
 
 // Отправка данных в бота (если нужно)
-function sendDataToBot(data) {
-    tg.sendData(JSON.stringify(data));
-}
-
-// Готовность приложения
-tg.ready();
-// Добавляем эти переменные
-const updateButton = document.getElementById('update-button');
-const adminPanel = document.getElementById('admin-panel');
-const parseDataButton = document.getElementById('parse-data-button');
-const updateResult = document.getElementById('update-result');
-
-// Конфигурация
-const APP_SCRIPT_URL = 'https://script.google.com/.../exec'; // Ваш URL Apps Script
-
-// В функции showUserData добавляем проверку роли
-async function showUserData(user) {
-    authSection.classList.add('hidden');
-    userSection.classList.remove('hidden');
-    
-    userName.textContent = `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
-    userId.textContent = user.id;
-    userUsername.textContent = user.username || 'отсутствует';
-    
-    // Проверяем роль пользователя
-    const userRole = await checkUserRole(user.id);
-    if (userRole.role === 'Управляющий' || userRole.role === 'Заместитель') {
-        updateButton.classList.remove('hidden');
-        adminPanel.classList.remove('hidden');
-    }
-}
-
-// Функция проверки роли пользователя
-async function checkUserRole(telegramId) {
-    try {
-        const response = await fetch(`${APP_SCRIPT_URL}?function=getUserRole&telegramId=${telegramId}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Ошибка проверки роли:', error);
-        return { role: '' };
-    }
-}
-
-// Функция обновления данных
-async function updateScheduleData() {
-    const userData = JSON.parse(localStorage.getItem('tg_user_data'));
-    
-    if (!userData) {
-        alert('Пользователь не авторизован');
-        return;
-    }
-    
-    parseDataButton.disabled = true;
-    updateResult.innerHTML = 'Обновление...';
-    
-    try {
-        const response = await fetch(`${APP_SCRIPT_URL}?function=parseSchedule&telegramId=${userData.id}`);
-        const result = await response.json();
-        
-        if (result.success) {
-            updateResult.innerHTML = `✅ ${result.message}<br>Обновил: ${result.updatedBy}`;
-        } else {
-            updateResult.innerHTML = `❌ ${result.error}`;
-        }
-    } catch (error) {
-        updateResult.innerHTML = '❌ Ошибка соединения';
-    } finally {
-        parseDataButton.disabled = false;
-        
-        // Автоматически скрываем результат через 5 секунд
-        setTimeout(() => {
-            updateResult.innerHTML = '';
-        }, 5000);
-    }
-}
-
-// Назначаем обработчик кнопки
-parseDataButton.addEventListener('click', updateScheduleData);
-
-// Функция для отправки данных в бота (если нужно)
 function sendDataToBot(data) {
     if (tg && tg.sendData) {
         tg.sendData(JSON.stringify(data));
     }
-}
-
-// Готовность приложения
-if (tg) {
-    tg.ready();
 }

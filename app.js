@@ -3,20 +3,24 @@ const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9d8Ga5wlPozchr
 
 // Элементы DOM
 const userName = document.getElementById('user-name');
-const logoutButton = document.getElementById('logout-button');
 const monthSelector = document.getElementById('month-selector');
 const refreshBtn = document.getElementById('refresh-btn');
 const calendarGrid = document.getElementById('calendar-grid');
 const loading = document.getElementById('loading');
+const todayDate = document.getElementById('today-date');
+const todayEmployee = document.getElementById('today-employee');
+const todayStatus = document.getElementById('today-status');
 
 let currentUser = null;
-let shiftsData = [];
+let employeeIds = [];
+let allShifts = [];
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
     if (tg) {
         tg.expand();
         tg.ready();
+        tg.enableClosingConfirmation();
     }
     initApp();
 });
@@ -35,9 +39,9 @@ function initApp() {
         } else {
             // Если нет данных - показываем сообщение
             document.body.innerHTML = `
-                <div style="padding: 20px; text-align: center;">
+                <div style="padding: 40px; text-align: center;">
                     <h2>Откройте приложение в Telegram</h2>
-                    <p>Это приложение работает только внутри Telegram</p>
+                    <p style="margin-top: 10px; color: #666;">Это приложение работает только внутри Telegram</p>
                 </div>
             `;
             return;
@@ -48,29 +52,33 @@ function initApp() {
     userName.textContent = `${currentUser.first_name}${currentUser.last_name ? ' ' + currentUser.last_name : ''}`;
     
     // Настройка обработчиков
-    logoutButton.addEventListener('click', logout);
-    refreshBtn.addEventListener('click', loadShifts);
-    monthSelector.addEventListener('change', renderCalendar);
+    refreshBtn.addEventListener('click', loadMonthData);
+    monthSelector.addEventListener('change', loadMonthData);
+
+    // Устанавливаем текущий месяц
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
+    monthSelector.value = currentMonth;
 
     // Загружаем данные
-    loadShifts();
+    loadMonthData();
 }
 
-// Загрузка смен
-async function loadShifts() {
+// Загрузка данных для выбранного месяца
+async function loadMonthData() {
     showLoading(true);
     
     try {
         console.log('Загрузка данных для TG ID:', currentUser.id);
         
-        // 1. Получаем ID сотрудников (без CORS настроек)
+        // 1. Получаем ID сотрудников
         const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
         
         if (!idsResponse.ok) {
-            throw new Error(`HTTP error! status: ${idsResponse.status}`);
+            throw new Error(`Ошибка сервера: ${idsResponse.status}`);
         }
         
-        const employeeIds = await idsResponse.json();
+        employeeIds = await idsResponse.json();
         console.log('Найдены ID сотрудников:', employeeIds);
         
         if (employeeIds.length === 0) {
@@ -79,41 +87,38 @@ async function loadShifts() {
             return;
         }
         
-       // 2. Загружаем смены для всех ID
-const allShifts = [];
-for (const id of employeeIds) {
-  try {
-    const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
-    
-    // ДОБАВЬТЕ ПРОВЕРКУ НА ОШИБКУ HTTP (как у первого запроса)
-    if (!shiftsResponse.ok) {
-      throw new Error(`HTTP error! status: ${shiftsResponse.status} for employeeId ${id}`);
-    }
-    
-    const shifts = await shiftsResponse.json();
-    console.log(`Смены для ID ${id}:`, shifts);
-    allShifts.push(...shifts);
-  } catch (error) {
-    // ПЕРЕДАЙТЕ ОШИБКУ ДАЛЬШЕ, чтобы ее поймал внешний блок catch
-    console.error(`Критическая ошибка загрузки для ID ${id}:`, error);
-    // Можно решить, пропустить ID или прервать загрузку
-    // allShifts.push(...[]); // Просто пропускаем этого сотрудника
-  }
-}
+        // 2. Загружаем смены ТОЛЬКО для выбранного месяца
+        const selectedMonth = monthSelector.value;
+        allShifts = [];
         
-        shiftsData = allShifts;
-        console.log('Всего смен:', shiftsData.length);
+        for (const id of employeeIds) {
+            try {
+                const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByMonth&employeeId=${id}&month=${selectedMonth}`);
+                
+                if (shiftsResponse.ok) {
+                    const shifts = await shiftsResponse.json();
+                    console.log(`Смены для ID ${id} за ${selectedMonth}:`, shifts);
+                    
+                    const shiftsWithId = shifts.map(shift => ({
+                        ...shift,
+                        employeeId: id,
+                        isMainUser: true
+                    }));
+                    
+                    allShifts.push(...shiftsWithId);
+                }
+            } catch (error) {
+                console.warn(`Ошибка загрузки смен для ID ${id}:`, error);
+            }
+        }
+        
+        console.log('Смены за месяц:', allShifts.length);
         renderCalendar();
+        updateTodayInfo();
         
     } catch (error) {
         console.error('Ошибка загрузки:', error);
-        
-        // Если CORS ошибка, покажем специфическое сообщение
-        if (error.message.includes('CORS') || error.message.includes('Network')) {
-            alert('CORS ошибка. Попробуйте открыть приложение в HTTPS режиме или настройте CORS прокси.');
-        } else {
-            alert('Ошибка загрузки данных: ' + error.message);
-        }
+        alert('Ошибка загрузки данных: ' + error.message);
     } finally {
         showLoading(false);
     }
@@ -125,9 +130,10 @@ function renderCalendar() {
     const [year, month] = selectedMonth.split('-').map(Number);
     
     // Фильтруем смены по выбранному месяцу
-    const monthShifts = shiftsData.filter(shift => {
+    const monthShifts = allShifts.filter(shift => {
         const shiftDate = new Date(shift.date);
-        return shiftDate.getFullYear() === year && shiftDate.getMonth() + 1 === month;
+        return shiftDate.getFullYear() === year && 
+               shiftDate.getMonth() + 1 === month;
     });
     
     // Создаем календарь
@@ -146,28 +152,96 @@ function renderCalendar() {
     
     // Дни месяца
     const daysInMonth = new Date(year, month, 0).getDate();
+    const today = new Date();
     
     for (let day = 1; day <= daysInMonth; day++) {
         const dayElement = document.createElement('div');
         const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        const shift = monthShifts.find(s => s.date === dateStr);
         
-        dayElement.className = 'calendar-day';
-        if (shift) {
-            dayElement.classList.add(shift.hours === 12 ? 'long-shift' : 'has-shift');
+        // Проверяем, сегодня ли это
+        if (today.getDate() === day && 
+            today.getMonth() + 1 === month && 
+            today.getFullYear() === year) {
+            dayElement.classList.add('today');
         }
         
-        dayElement.innerHTML = `
-            <div class="day-number">${day}</div>
-            ${shift ? `
-                <div class="shift-info">
-                    ${shift.hours}ч
-                </div>
-            ` : ''}
-        `;
+        dayElement.className = 'calendar-day';
+        
+        // Добавляем номер дня
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = day;
+        dayElement.appendChild(dayNumber);
+        
+        // Смены для этого дня
+        const dayShifts = monthShifts.filter(s => s.date === dateStr);
+        
+        if (dayShifts.length > 0) {
+            const shiftsContainer = document.createElement('div');
+            shiftsContainer.className = 'shifts-container';
+            
+            // Сортируем: сначала смены текущего пользователя
+            const sortedShifts = [...dayShifts].sort((a, b) => {
+                if (a.isMainUser && !b.isMainUser) return -1;
+                if (!a.isMainUser && b.isMainUser) return 1;
+                return 0;
+            });
+            
+            sortedShifts.forEach(shift => {
+                const shiftItem = document.createElement('div');
+                shiftItem.className = `shift-item ${shift.isMainUser ? 'main-user' : 'other-user'} shift-${getShiftTypeClass(shift.hours)}`;
+                
+                const hoursSpan = document.createElement('span');
+                hoursSpan.className = 'shift-hours';
+                hoursSpan.textContent = `${shift.hours}ч`;
+                
+                const shiftText = document.createTextNode(shift.isMainUser ? ' Ваша смена' : ' Смена');
+                
+                shiftItem.appendChild(hoursSpan);
+                shiftItem.appendChild(shiftText);
+                shiftsContainer.appendChild(shiftItem);
+            });
+            
+            dayElement.appendChild(shiftsContainer);
+        }
         
         calendarGrid.appendChild(dayElement);
     }
+}
+
+// Обновление информации на сегодня
+function updateTodayInfo() {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Устанавливаем дату
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    todayDate.textContent = today.toLocaleDateString('ru-RU', options);
+    
+    // Устанавливаем имя сотрудника
+    todayEmployee.textContent = `${currentUser.first_name}${currentUser.last_name ? ' ' + currentUser.last_name : ''}`;
+    
+    // Проверяем есть ли смена сегодня
+    const todayShifts = allShifts.filter(shift => shift.date === todayStr);
+    
+    if (todayShifts.length > 0) {
+        const todayShift = todayShifts[0];
+        todayStatus.textContent = `Есть смена: ${todayShift.hours} часов (${todayShift.shiftType || 'смена'})`;
+        todayStatus.className = 'has-shift';
+    } else {
+        todayStatus.textContent = 'Сегодня смены нет';
+        todayStatus.className = 'no-shift';
+    }
+}
+
+// Получение класса типа смены
+function getShiftTypeClass(hours) {
+    if (hours <= 4) return 'short';
+    if (hours <= 8) return 'day';
+    if (hours <= 11) return 'full';
+    if (hours === 12) return 'extended';
+    if (hours > 12) return 'long';
+    return 'full';
 }
 
 // Вспомогательные функции

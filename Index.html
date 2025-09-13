@@ -470,14 +470,29 @@
                     return;
                 }
                 
-                // 2. Загружаем ВСЕ смены (для всех сотрудников)
-                const allShiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getAllShifts`);
-                
-                if (!allShiftsResponse.ok) {
-                    throw new Error(`Ошибка загрузки всех смен: ${allShiftsResponse.status}`);
+                // 2. Загружаем смены для всех ID сотрудников пользователя
+                allShifts = [];
+                for (const id of employeeIds) {
+                    try {
+                        const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
+                        
+                        if (shiftsResponse.ok) {
+                            const shifts = await shiftsResponse.json();
+                            console.log(`Смены для ID ${id}:`, shifts);
+                            
+                            // Добавляем employeeId к каждой смене
+                            const shiftsWithId = shifts.map(shift => ({
+                                ...shift,
+                                employeeId: id
+                            }));
+                            
+                            allShifts.push(...shiftsWithId);
+                        }
+                    } catch (error) {
+                        console.warn(`Ошибка загрузки смен для ID ${id}:`, error);
+                    }
                 }
                 
-                allShifts = await allShiftsResponse.json();
                 console.log('Всего смен загружено:', allShifts.length);
                 
                 renderCalendar();
@@ -498,7 +513,8 @@
             // Фильтруем смены по выбранному месяцу
             const monthShifts = allShifts.filter(shift => {
                 const shiftDate = new Date(shift.date);
-                return shiftDate.getFullYear() === year && shiftDate.getMonth() + 1 === month;
+                return shiftDate.getFullYear() === year && 
+                       shiftDate.getMonth() + 1 === month;
             });
             
             // Создаем календарь

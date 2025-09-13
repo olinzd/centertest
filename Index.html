@@ -268,6 +268,38 @@
             border-radius: 4px;
         }
 
+        .today-info {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        text-align: center;
+        }
+        
+        .today-info h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+        
+        .today-info p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        
+        #today-status {
+            font-weight: 600;
+        }
+        
+        #today-status.has-shift {
+            color: #2ecc71;
+        }
+        
+        #today-status.no-shift {
+            color: #e74c3c;
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .calendar-day {
@@ -346,7 +378,12 @@
             </div>
             <div id="calendar-grid" class="calendar-grid"></div>
         </div>
-
+        <!-- Today Info -->
+            <div class="today-info">
+                <h3>Сегодня: <span id="today-date"></span></h3>
+                <p>Сотрудник: <span id="today-employee"></span></p>
+                <p>Статус: <span id="today-status"></span></p>
+            </div>
         <!-- Legend -->
         <div class="legend">
             <div class="legend-title">Обозначения смен</div>

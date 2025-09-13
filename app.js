@@ -61,9 +61,23 @@ async function loadShifts() {
     showLoading(true);
     
     try {
-        // 1. Получаем ID сотрудников по Telegram ID
-        const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`);
+        console.log('Загрузка данных для TG ID:', currentUser.id);
+        
+        // 1. Получаем ID сотрудников
+        const idsResponse = await fetch(`${APP_SCRIPT_URL}?function=getEmployeeIds&telegramId=${currentUser.id}`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!idsResponse.ok) {
+            throw new Error(`HTTP error! status: ${idsResponse.status}`);
+        }
+        
         const employeeIds = await idsResponse.json();
+        console.log('Найдены ID сотрудников:', employeeIds);
         
         if (employeeIds.length === 0) {
             alert('Сотрудник не найден. Обратитесь к администратору.');
@@ -74,17 +88,34 @@ async function loadShifts() {
         // 2. Загружаем смены для всех ID
         const allShifts = [];
         for (const id of employeeIds) {
-            const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
-            const shifts = await shiftsResponse.json();
-            allShifts.push(...shifts);
+            try {
+                const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (shiftsResponse.ok) {
+                    const shifts = await shiftsResponse.json();
+                    console.log(`Смены для ID ${id}:`, shifts);
+                    allShifts.push(...shifts);
+                } else {
+                    console.warn(`Ошибка для ID ${id}:`, shiftsResponse.status);
+                }
+            } catch (error) {
+                console.warn(`Ошибка загрузки для ID ${id}:`, error);
+            }
         }
         
         shiftsData = allShifts;
+        console.log('Всего смен:', shiftsData.length);
         renderCalendar();
         
     } catch (error) {
-        console.error('Ошибка загрузки смен:', error);
-        alert('Ошибка загрузки данных. Проверьте подключение.');
+        console.error('Ошибка загрузки:', error);
+        alert('Ошибка подключения к серверу. Проверьте консоль для деталей.');
     } finally {
         showLoading(false);
     }

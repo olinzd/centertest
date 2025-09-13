@@ -79,23 +79,27 @@ async function loadShifts() {
             return;
         }
         
-        // 2. Загружаем смены для всех ID
-        const allShifts = [];
-        for (const id of employeeIds) {
-            try {
-                const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
-                
-                if (shiftsResponse.ok) {
-                    const shifts = await shiftsResponse.json();
-                    console.log(`Смены для ID ${id}:`, shifts);
-                    allShifts.push(...shifts);
-                } else {
-                    console.warn(`Ошибка для ID ${id}:`, shiftsResponse.status);
-                }
-            } catch (error) {
-                console.warn(`Ошибка загрузки для ID ${id}:`, error);
-            }
-        }
+       // 2. Загружаем смены для всех ID
+const allShifts = [];
+for (const id of employeeIds) {
+  try {
+    const shiftsResponse = await fetch(`${APP_SCRIPT_URL}?function=getShiftsByEmployeeId&employeeId=${id}`);
+    
+    // ДОБАВЬТЕ ПРОВЕРКУ НА ОШИБКУ HTTP (как у первого запроса)
+    if (!shiftsResponse.ok) {
+      throw new Error(`HTTP error! status: ${shiftsResponse.status} for employeeId ${id}`);
+    }
+    
+    const shifts = await shiftsResponse.json();
+    console.log(`Смены для ID ${id}:`, shifts);
+    allShifts.push(...shifts);
+  } catch (error) {
+    // ПЕРЕДАЙТЕ ОШИБКУ ДАЛЬШЕ, чтобы ее поймал внешний блок catch
+    console.error(`Критическая ошибка загрузки для ID ${id}:`, error);
+    // Можно решить, пропустить ID или прервать загрузку
+    // allShifts.push(...[]); // Просто пропускаем этого сотрудника
+  }
+}
         
         shiftsData = allShifts;
         console.log('Всего смен:', shiftsData.length);

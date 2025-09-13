@@ -127,7 +127,7 @@
             background: white;
             position: relative;
             overflow: hidden;
-            min-height: 60px;
+            min-height: 80px;
         }
 
         .calendar-day.empty {
@@ -143,12 +143,13 @@
         .day-number {
             font-weight: 600;
             font-size: 14px;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             z-index: 2;
+            align-self: flex-start;
         }
 
-        /* Shift Parallelograms */
-        .shift-container {
+        /* Shift Items in Calendar */
+        .shifts-container {
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -157,48 +158,43 @@
             z-index: 1;
         }
 
-        .shift-parallelogram {
-            height: 16px;
-            background: currentColor;
-            transform: skewX(-15deg);
-            border-radius: 3px;
-            opacity: 0.9;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .shift-parallelogram.main-user {
-            height: 20px;
-            min-width: 80%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            z-index: 3;
-        }
-
-        .shift-parallelogram.other-user {
-            height: 8px;
-            min-width: 40%;
-            opacity: 0.6;
-        }
-
-        .shift-info {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) skewX(15deg);
-            color: white;
+        .shift-item {
+            width: 100%;
+            padding: 3px 5px;
+            border-radius: 5px;
             font-size: 10px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            pointer-events: none;
+            font-weight: 500;
+            text-align: center;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .shift-item.main-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            order: -1; /* Сдвигаем вверх */
+        }
+
+        .shift-item.other-user {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            color: #666;
+        }
+
+        .shift-hours {
+            font-weight: bold;
+            margin-right: 2px;
         }
 
         /* Shift Type Colors */
-        .shift-short { color: #ff9f43; } /* Короткая смена - оранжевый */
-        .shift-day { color: #54a0ff; }   /* Дневная смена - синий */
-        .shift-full { color: #2ecc71; }  /* Полная смена - зеленый */
-        .shift-extended { color: #9b59b6; } /* Расширенная смена - фиолетовый */
-        .shift-long { color: #e74c3c; }  /* Длинная смена - красный */
+        .shift-short { background: #ff9f43 !important; color: white !important; } /* Короткая смена */
+        .shift-day { background: #54a0ff !important; color: white !important; }   /* Дневная смена */
+        .shift-full { background: #2ecc71 !important; color: white !important; }  /* Полная смена */
+        .shift-extended { background: #9b59b6 !important; color: white !important; } /* Расширенная смена */
+        .shift-long { background: #e74c3c !important; color: white !important; }  /* Длинная смена */
 
         /* Loading */
         .loading {
@@ -269,31 +265,23 @@
         .legend-color {
             width: 16px;
             height: 16px;
-            border-radius: 3px;
-            transform: skewX(-15deg);
+            border-radius: 4px;
         }
 
         /* Responsive */
         @media (max-width: 480px) {
             .calendar-day {
                 padding: 6px 2px;
-                min-height: 50px;
+                min-height: 70px;
             }
             
             .day-number {
                 font-size: 12px;
             }
             
-            .shift-parallelogram.main-user {
-                height: 16px;
-            }
-            
-            .shift-parallelogram.other-user {
-                height: 6px;
-            }
-            
-            .shift-info {
-                font-size: 8px;
+            .shift-item {
+                font-size: 9px;
+                padding: 2px 3px;
             }
             
             .controls {
@@ -302,6 +290,16 @@
             
             .month-selector {
                 width: 100%;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .calendar-day {
+                min-height: 65px;
+            }
+            
+            .shift-item {
+                font-size: 8px;
             }
         }
     </style>
@@ -372,6 +370,10 @@
                 <div class="legend-item">
                     <div class="legend-color" style="background: #e74c3c;"></div>
                     <span>Длинная (12+ч)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #667eea;"></div>
+                    <span>Ваши смены</span>
                 </div>
             </div>
         </div>
@@ -470,7 +472,8 @@
                     return;
                 }
                 
-                // 2. Загружаем смены для всех ID сотрудников пользователя
+                // 2. Загружаем ВСЕ смены (нужно добавить функцию getAllShifts в Google Apps Script)
+                // Временное решение: загружаем только смены текущего пользователя
                 allShifts = [];
                 for (const id of employeeIds) {
                     try {
@@ -483,7 +486,8 @@
                             // Добавляем employeeId к каждой смене
                             const shiftsWithId = shifts.map(shift => ({
                                 ...shift,
-                                employeeId: id
+                                employeeId: id,
+                                isMainUser: true // Помечаем как смены текущего пользователя
                             }));
                             
                             allShifts.push(...shiftsWithId);
@@ -558,23 +562,32 @@
                 const dayShifts = monthShifts.filter(s => s.date === dateStr);
                 
                 if (dayShifts.length > 0) {
-                    const shiftContainer = document.createElement('div');
-                    shiftContainer.className = 'shift-container';
+                    const shiftsContainer = document.createElement('div');
+                    shiftsContainer.className = 'shifts-container';
                     
-                    dayShifts.forEach(shift => {
-                        const isMainUser = employeeIds.includes(shift.employeeId);
-                        const shiftElem = document.createElement('div');
-                        shiftElem.className = `shift-parallelogram ${isMainUser ? 'main-user' : 'other-user'} shift-${getShiftTypeClass(shift.hours)}`;
-                        
-                        const shiftInfo = document.createElement('div');
-                        shiftInfo.className = 'shift-info';
-                        shiftInfo.textContent = isMainUser ? `${shift.hours}ч` : '';
-                        
-                        shiftElem.appendChild(shiftInfo);
-                        shiftContainer.appendChild(shiftElem);
+                    // Сортируем: сначала смены текущего пользователя
+                    const sortedShifts = [...dayShifts].sort((a, b) => {
+                        if (a.isMainUser && !b.isMainUser) return -1;
+                        if (!a.isMainUser && b.isMainUser) return 1;
+                        return 0;
                     });
                     
-                    dayElement.appendChild(shiftContainer);
+                    sortedShifts.forEach(shift => {
+                        const shiftItem = document.createElement('div');
+                        shiftItem.className = `shift-item ${shift.isMainUser ? 'main-user' : 'other-user'} shift-${getShiftTypeClass(shift.hours)}`;
+                        
+                        const hoursSpan = document.createElement('span');
+                        hoursSpan.className = 'shift-hours';
+                        hoursSpan.textContent = `${shift.hours}ч`;
+                        
+                        const shiftText = document.createTextNode(shift.isMainUser ? ' Ваша смена' : ' Смена');
+                        
+                        shiftItem.appendChild(hoursSpan);
+                        shiftItem.appendChild(shiftText);
+                        shiftsContainer.appendChild(shiftItem);
+                    });
+                    
+                    dayElement.appendChild(shiftsContainer);
                 }
                 
                 calendarGrid.appendChild(dayElement);

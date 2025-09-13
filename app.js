@@ -1,5 +1,5 @@
 const tg = window.Telegram.WebApp;
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLPsTrJiZ6_2LTcwBiIxcf4MoC20SHBBafASrH8JKs84GJc2eC3qTqW0NFGJQiKFivLg/exec';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKzFCRlqDU_zHfk_wG0P_QIzb0IE6z5riEBrzbHjm82XGGF-h2FyoiVRDkMKXqGemIcA/exec';
 
 // Элементы DOM
 const userName = document.getElementById('user-name');
